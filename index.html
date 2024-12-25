@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supersus Clone - Simple Version</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #222;
+            color: white;
+            overflow: hidden;
+        }
+        .login-container, .game-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .login-container input {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            width: 80%;
+            border: none;
+            border-radius: 5px;
+        }
+        .login-container button {
+            padding: 10px 20px;
+            background: #28a745;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .login-container button:hover {
+            background: #218838;
+        }
+        .game-container {
+            display: none;
+        }
+        #game-area {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .character {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: lightblue;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .ghost {
+            background: rgba(255, 0, 0, 0.6);
+            border-radius: 50% 50% 0 0;
+            border-bottom: 10px solid rgba(255, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Supersus Clone</h1>
+        <input type="text" placeholder="Username" id="username">
+        <input type="password" placeholder="Password" id="password">
+        <button onclick="startGame()">Login</button>
+    </div>
+
+    <div class="game-container">
+        <h1>Game Area</h1>
+        <div id="game-area">
+            <div class="character" id="player" style="top: 50%; left: 50%;"></div>
+            <div class="character ghost" id="ghost" style="top: 20%; left: 30%;"></div>
+        </div>
+    </div>
+
+    <script>
+        function startGame() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username && password) {
+                document.querySelector('.login-container').style.display = 'none';
+                document.querySelector('.game-container').style.display = 'block';
+                initGame();
+            } else {
+                alert('Please enter a username and password.');
+            }
+        }
+
+        function initGame() {
+            const player = document.getElementById('player');
+            const ghost = document.getElementById('ghost');
+
+            // Movement for player
+            document.addEventListener('keydown', (e) => {
+                const rect = player.getBoundingClientRect();
+                if (e.key === 'ArrowUp' && rect.top > 0) {
+                    player.style.top = rect.top - 10 + 'px';
+                }
+                if (e.key === 'ArrowDown' && rect.bottom < window.innerHeight) {
+                    player.style.top = rect.top + 10 + 'px';
+                }
+                if (e.key === 'ArrowLeft' && rect.left > 0) {
+                    player.style.left = rect.left - 10 + 'px';
+                }
+                if (e.key === 'ArrowRight' && rect.right < window.innerWidth) {
+                    player.style.left = rect.left + 10 + 'px';
+                }
+            });
+
+            // Ghost random movement
+            setInterval(() => {
+                const ghostX = Math.random() * window.innerWidth;
+                const ghostY = Math.random() * window.innerHeight;
+
+                ghost.style.left = ghostX + 'px';
+                ghost.style.top = ghostY + 'px';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
