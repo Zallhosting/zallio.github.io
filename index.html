@@ -3,126 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supersus Clone - Simple Version</title>
+    <title>Sniper 3D Enhanced</title>
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #222;
-            color: blue;
             overflow: hidden;
+            background: black;
+            font-family: Arial, sans-serif;
         }
-        .login-container, .game-container {
+        #game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            color: white;
+            text-align: center;
+        }
+        #crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-        .login-container input {
-            display: block;
-            margin: 10px auto;
-            padding: 10px;
-            width: 80%;
-            border: none;
-            border-radius: 5px;
-        }
-        .login-container button {
-            padding: 10px 20px;
-            background: #28a745;
-            border: none;
-            border-radius: 5px;
-            color: green;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .login-container button:hover {
-            background: #218838;
-        }
-        .game-container {
-            display: none;
-        }
-        #game-area {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .character {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: lightblue;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            border: 2px solid red;
             border-radius: 50%;
-            transition: transform 0.2s;
+            transform: translate(-50%, -50%);
         }
-        .ghost {
-            background: rgba(255, 0, 0, 0.6);
-            border-radius: 50% 50% 0 0;
-            border-bottom: 10px solid rgba(255, 0, 0, 0.6);
+        #score, #timer, #lives {
+            position: absolute;
+            font-size: 20px;
+        }
+        #score {
+            top: 10px;
+            left: 10px;
+        }
+        #timer {
+            top: 10px;
+            right: 10px;
+        }
+        #lives {
+            bottom: 10px;
+            left: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h1>Supersus Clone</h1>
-        <input type="text" placeholder="Username" id="username">
-        <input type="password" placeholder="Password" id="password">
-        <button onclick="startGame()">Login</button>
+    <div id="game-overlay">
+        <div id="crosshair"></div>
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 60</div>
+        <div id="lives">Lives: 3</div>
     </div>
-
-    <div class="game-container">
-        <h1>Game Area</h1>
-        <div id="game-area">
-            <div class="character" id="player" style="top: 50%; left: 50%;"></div>
-            <div class="character ghost" id="ghost" style="top: 20%; left: 30%;"></div>
-        </div>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        function startGame() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        // Setup scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-            if (username && password) {
-                document.querySelector('.login-container').style.display = 'none';
-                document.querySelector('.game-container').style.display = 'block';
-                initGame();
-            } else {
-                alert('Please enter a username and password.');
-            }
+        // Add lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5).normalize();
+        scene.add(light);
+
+        // Load textures
+        const textureLoader = new THREE.TextureLoader();
+        const targetTexture = textureLoader.load('https://threejs.org/examples/textures/crate.gif'); // Replace with your texture
+        const groundTexture = textureLoader.load('https://threejs.org/examples/textures/grasslight-big.jpg');
+        groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+        groundTexture.repeat.set(10, 10);
+
+        // Create a target object
+        const targets = [];
+        const targetGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const targetMaterial = new THREE.MeshStandardMaterial({ map: targetTexture });
+
+        function spawnTarget() {
+            const target = new THREE.Mesh(targetGeometry, targetMaterial);
+            target.position.set(
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10,
+                -10 - Math.random() * 20
+            );
+            scene.add(target);
+            targets.push(target);
         }
 
-        function initGame() {
-            const player = document.getElementById('player');
-            const ghost = document.getElementById('ghost');
+        // Spawn initial targets
+        for (let i = 0; i < 5; i++) {
+            spawnTarget();
+        }
 
-            // Movement for player
-            document.addEventListener('keydown', (e) => {
-                const rect = player.getBoundingClientRect();
-                if (e.key === 'ArrowUp' && rect.top > 0) {
-                    player.style.top = rect.top - 10 + 'px';
+        // Add ground plane
+        const planeGeometry = new THREE.PlaneGeometry(100, 100);
+        const planeMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        scene.add(plane);
+
+        // Set camera position
+        camera.position.z = 5;
+
+        // HUD elements
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const livesDisplay = document.getElementById('lives');
+        let score = 0;
+        let timer = 60;
+        let lives = 3;
+
+        // Raycaster for shooting
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Shooting sound
+        const shootSound = new Audio('https://www.soundjay.com/button/beep-07.wav');
+        const hitSound = new Audio('https://www.soundjay.com/button/button-3.wav');
+
+        // Shooting mechanic
+        window.addEventListener('click', () => {
+            shootSound.play();
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(targets);
+
+            if (intersects.length > 0) {
+                const target = intersects[0].object;
+                hitSound.play();
+                scene.remove(target);
+                targets.splice(targets.indexOf(target), 1);
+                score += 10;
+                scoreDisplay.textContent = `Score: ${score}`;
+                spawnTarget();
+            }
+        });
+
+        // Bullet animation
+        function animateBullet() {
+            const bulletGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+            const bulletMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+            bullet.position.copy(camera.position);
+            scene.add(bullet);
+
+            const targetPosition = new THREE.Vector3(mouse.x * 10, mouse.y * 10, -10);
+            const bulletSpeed = 0.5;
+
+            function moveBullet() {
+                bullet.position.lerp(targetPosition, bulletSpeed);
+                if (bullet.position.distanceTo(targetPosition) < 0.1) {
+                    scene.remove(bullet);
+                } else {
+                    requestAnimationFrame(moveBullet);
                 }
-                if (e.key === 'ArrowDown' && rect.bottom < window.innerHeight) {
-                    player.style.top = rect.top + 10 + 'px';
-                }
-                if (e.key === 'ArrowLeft' && rect.left > 0) {
-                    player.style.left = rect.left - 10 + 'px';
-                }
-                if (e.key === 'ArrowRight' && rect.right < window.innerWidth) {
-                    player.style.left = rect.left + 10 + 'px';
+            }
+            moveBullet();
+        }
+
+        window.addEventListener('click', animateBullet);
+
+        // Timer and lives
+        function updateTimer() {
+            timer--;
+            timerDisplay.textContent = `Time: ${timer}`;
+            if (timer <= 0) {
+                alert('Game Over! Your score: ' + score);
+                location.reload();
+            }
+        }
+        setInterval(updateTimer, 1000);
+
+        function checkLives() {
+            targets.forEach((target) => {
+                if (target.position.z > 5) {
+                    scene.remove(target);
+                    targets.splice(targets.indexOf(target), 1);
+                    lives--;
+                    livesDisplay.textContent = `Lives: ${lives}`;
+                    spawnTarget();
                 }
             });
 
-            // Ghost random movement
-            setInterval(() => {
-                const ghostX = Math.random() * window.innerWidth;
-                const ghostY = Math.random() * window.innerHeight;
-
-                ghost.style.left = ghostX + 'px';
-                ghost.style.top = ghostY + 'px';
-            }, 1000);
+            if (lives <= 0) {
+                alert('Game Over! Your score: ' + score);
+                location.reload();
+            }
         }
+        setInterval(checkLives, 100);
+
+        // Game loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move targets closer
+            targets.forEach((target) => {
+                target.position.z += 0.1;
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Update mouse position
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
     </script>
 </body>
 </html>
